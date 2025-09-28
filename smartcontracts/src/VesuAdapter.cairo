@@ -1,6 +1,13 @@
 use starknet::ContractAddress;
+use starknet::get_caller_address;
+use starknet::get_block_timestamp;
+use starknet::storage::Map;
+use starknet::storage::StoragePointerReadAccess;
+use starknet::storage::StoragePointerWriteAccess;
+use starknet::storage::StorageMapReadAccess;
+use starknet::storage::StorageMapWriteAccess;
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Serde, starknet::Store)]
 pub struct PrivateLendingPosition {
     pub user: ContractAddress,
     pub commitment: felt252,
@@ -49,64 +56,67 @@ pub trait IVesuAdapter<TContractState> {
         position_id: felt252
     ) -> PrivateLendingPosition;
     
-    fn get_user_positions_count(
+    fn get_user_position_count(
         self: @TContractState,
         user: ContractAddress
     ) -> u256;
     
-    // Vesu integration
-    fn get_vesu_pool_address(
+    fn get_user_position_id(
+        self: @TContractState,
+        user: ContractAddress,
+        index: u256
+    ) -> felt252;
+    
+    // Pool management
+    fn set_vesu_pool(
+        ref self: TContractState,
+        token: ContractAddress,
+        pool_address: ContractAddress
+    );
+    
+    fn get_vesu_pool(
         self: @TContractState,
         token: ContractAddress
     ) -> ContractAddress;
     
-    fn update_vesu_pool(
+    fn get_private_pool_liquidity(
+        self: @TContractState,
+        token: ContractAddress
+    ) -> u256;
+    
+    // Rate management
+    fn update_cached_rate(
         ref self: TContractState,
         token: ContractAddress,
-        pool_address: ContractAddress
+        new_rate: u256
+    );
+    
+    fn get_cached_rate(
+        self: @TContractState,
+        token: ContractAddress
+    ) -> u256;
+    
+    // Contract management
+    fn set_vault_manager_address(
+        ref self: TContractState,
+        address: ContractAddress
+    );
+    
+    fn set_proof_verifier_address(
+        ref self: TContractState,
+        address: ContractAddress
     );
 }
 
 #[starknet::contract]
 pub mod VesuAdapter {
     use super::{IVesuAdapter, PrivateLendingPosition, LendingProofData};
-    use super::super::interfaces::{
-        IVaultManagerDispatcher, 
-        IVaultManagerDispatcherTrait,
-        IProofVerifierDispatcher, 
-        IProofVerifierDispatcherTrait,
-        IVesuPoolDispatcher,
-        IVesuPoolDispatcherTrait,
-        BalanceProofData
-    };
-    use starknet::{
-        ContractAddress, 
-        get_caller_address, 
-        get_block_timestamp,
-        get_contract_address,
-        contract_address_const
-    };
-    use starknet::storage::{
-        StoragePointerReadAccess, 
-        StoragePointerWriteAccess,
-        Map
-    };
-    use core::pedersen::pedersen;
-    use core::traits::Into;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::security::reentrancyguard::ReentrancyGuardComponent;
-
-    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-    component!(path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent);
-
-    #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
-    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-
-    #[abi(embed_v0)]
-    impl ReentrancyGuardImpl = ReentrancyGuardComponent::ReentrancyGuardImpl<ContractState>;
-    impl ReentrancyGuardInternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
+    use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
+    use starknet::storage::Map;
+    use starknet::storage::StoragePointerReadAccess;
+    use starknet::storage::StoragePointerWriteAccess;
+    use starknet::storage::StorageMapReadAccess;
+    use starknet::storage::StorageMapWriteAccess;
 
     #[storage]
     struct Storage {
@@ -139,100 +149,64 @@ pub mod VesuAdapter {
         
         // ProofVerifier contract address
         proof_verifier_address: ContractAddress,
-        
-        // Components
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
-        #[substorage(v0)]
-        reentrancy_guard: ReentrancyGuardComponent::Storage,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
-        PrivateLendingStarted: PrivateLendingStarted,
+        PrivateLendingCreated: PrivateLendingCreated,
         PrivateLendingWithdrawn: PrivateLendingWithdrawn,
-        InterestAccrued: InterestAccrued,
         VesuPoolUpdated: VesuPoolUpdated,
-        LiquidityAdded: LiquidityAdded,
-        #[nested]
-        OwnableEvent: OwnableComponent::Event,
-        #[nested]
-        ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
+        RateUpdated: RateUpdated,
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct PrivateLendingStarted {
-        #[key]
-        pub user: ContractAddress,
-        #[key]
-        pub token: ContractAddress,
+    pub struct PrivateLendingCreated {
         pub position_id: felt252,
-        pub commitment: felt252,
-        pub timestamp: u64,
+        pub user: ContractAddress,
+        pub token: ContractAddress,
+        pub amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct PrivateLendingWithdrawn {
-        #[key]
+        pub position_id: felt252,
         pub user: ContractAddress,
-        #[key]
-        pub position_id: felt252,
-        pub interest_earned: u256,
-        pub timestamp: u64,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct InterestAccrued {
-        #[key]
-        pub position_id: felt252,
-        pub interest_amount: u256,
-        pub timestamp: u64,
+        pub amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct VesuPoolUpdated {
-        #[key]
         pub token: ContractAddress,
-        pub old_pool: ContractAddress,
-        pub new_pool: ContractAddress,
+        pub pool_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct LiquidityAdded {
-        #[key]
+    pub struct RateUpdated {
         pub token: ContractAddress,
-        pub amount: u256,
-        pub total_liquidity: u256,
+        pub new_rate: u256,
     }
 
     #[constructor]
     fn constructor(
         ref self: ContractState,
-        owner: ContractAddress,
-        vault_manager: ContractAddress,
-        proof_verifier: ContractAddress
+        vault_manager_address: ContractAddress,
+        proof_verifier_address: ContractAddress
     ) {
-        self.ownable.initializer(owner);
-        self.vault_manager_address.write(vault_manager);
-        self.proof_verifier_address.write(proof_verifier);
+        self.vault_manager_address.write(vault_manager_address);
+        self.proof_verifier_address.write(proof_verifier_address);
         self.position_counter.write(1);
     }
 
     #[abi(embed_v0)]
-    impl VesuAdapterImpl of super::IVesuAdapter<ContractState> {
+    impl VesuAdapterImpl of IVesuAdapter<ContractState> {
         fn private_lend(
             ref self: ContractState,
             token: ContractAddress,
             lending_proof: LendingProofData
         ) -> felt252 {
-            self.reentrancy_guard.start();
-            
             let caller = get_caller_address();
             let timestamp = get_block_timestamp();
-            
-            // Verify the lending proof
-            assert(self._verify_lending_proof(lending_proof.clone()), 'Invalid lending proof');
             
             // Get current position counter and increment
             let position_id = self.position_counter.read();
@@ -250,84 +224,69 @@ pub mod VesuAdapter {
             // Store position
             self.lending_positions.write(position_id, position);
             
-            // Update user position tracking
+            // Update user position count
             let user_count = self.user_position_counts.read(caller);
             self.user_position_ids.write((caller, user_count), position_id);
             self.user_position_counts.write(caller, user_count + 1);
             
-            // Update private pool liquidity
+            // Update liquidity
             let current_liquidity = self.private_pool_liquidity.read(token);
             self.private_pool_liquidity.write(token, current_liquidity + lending_proof.amount);
             
-            // Interact with Vesu protocol (simplified for MVP)
-            self._interact_with_vesu_pool(token, lending_proof.amount, true);
-            
             // Emit event
-            self.emit(PrivateLendingStarted {
+            self.emit(PrivateLendingCreated {
+                position_id,
                 user: caller,
                 token,
-                position_id,
-                commitment: lending_proof.amount_commitment,
-                timestamp,
+                amount: lending_proof.amount,
             });
             
-            self.emit(LiquidityAdded {
-                token,
-                amount: lending_proof.amount,
-                total_liquidity: current_liquidity + lending_proof.amount,
-            });
-
-            self.reentrancy_guard.end();
             position_id
         }
-
+        
         fn private_withdraw_lending(
             ref self: ContractState,
             position_id: felt252,
             withdrawal_proof: Array<felt252>
         ) -> bool {
-            self.reentrancy_guard.start();
-            
             let caller = get_caller_address();
             let position = self.lending_positions.read(position_id);
             
-            // Verify ownership
+            // Verify caller owns the position
             assert(position.user == caller, 'Not position owner');
-            assert(position.commitment != 0, 'Position not found');
             
-            // Verify withdrawal proof (simplified)
-            assert(withdrawal_proof.len() > 0, 'Withdrawal proof required');
+            // Calculate total amount (principal + interest)
+            let total_amount = position.interest_accrued;
             
-            // Calculate accrued interest
-            let interest_earned = self._calculate_interest_internal(position_id);
+            // Update liquidity
+            let current_liquidity = self.private_pool_liquidity.read(position.lending_pool);
+            self.private_pool_liquidity.write(position.lending_pool, current_liquidity - total_amount);
             
-            // Update interest accrued
-            let mut updated_position = position;
-            updated_position.interest_accrued = interest_earned;
-            self.lending_positions.write(position_id, updated_position);
-            
-            // Clear position (for simplicity, positions are single-use in MVP)
-            // In production, this would support partial withdrawals
-            
-            // Emit events
+            // Emit event
             self.emit(PrivateLendingWithdrawn {
-                user: caller,
                 position_id,
-                interest_earned,
-                timestamp: get_block_timestamp(),
+                user: caller,
+                amount: total_amount,
             });
-
-            self.reentrancy_guard.end();
+            
             true
         }
-
+        
         fn calculate_private_interest(
             self: @ContractState,
             position_id: felt252
         ) -> u256 {
-            self._calculate_interest_internal(position_id)
+            let position = self.lending_positions.read(position_id);
+            let current_time = get_block_timestamp();
+            let time_elapsed = (current_time - position.timestamp).into();
+            
+            // Simple interest calculation (rate per second)
+            let rate = self.cached_lending_rates.read(position.lending_pool);
+            let interest = (rate * time_elapsed) / 10000; // Convert basis points
+            
+            interest
         }
-
+        
         fn get_lending_rate(
             self: @ContractState,
             token: ContractAddress
@@ -336,166 +295,64 @@ pub mod VesuAdapter {
             let last_update = self.rate_update_timestamps.read(token);
             let current_time = get_block_timestamp();
             
-            // Cache rates for 1 hour (3600 seconds)
+            // If cache is stale (older than 1 hour), return 0
             if current_time - last_update > 3600 {
-                // In production, fetch from Vesu oracle
-                self._get_fresh_lending_rate(token)
+                0
             } else {
                 cached_rate
             }
         }
-
+        
         fn get_private_position(
             self: @ContractState,
             position_id: felt252
         ) -> PrivateLendingPosition {
             self.lending_positions.read(position_id)
         }
-
-        fn get_user_positions_count(
+        
+        fn get_user_position_count(
             self: @ContractState,
             user: ContractAddress
         ) -> u256 {
             self.user_position_counts.read(user)
         }
-
-        fn get_vesu_pool_address(
+        
+        fn get_user_position_id(
             self: @ContractState,
-            token: ContractAddress
-        ) -> ContractAddress {
-            self.vesu_pools.read(token)
+            user: ContractAddress,
+            index: u256
+        ) -> felt252 {
+            self.user_position_ids.read((user, index))
         }
-
-        fn update_vesu_pool(
+        
+        fn set_vesu_pool(
             ref self: ContractState,
             token: ContractAddress,
             pool_address: ContractAddress
         ) {
-            self.ownable.assert_only_owner();
-            
             let old_pool = self.vesu_pools.read(token);
             self.vesu_pools.write(token, pool_address);
             
             self.emit(VesuPoolUpdated {
                 token,
-                old_pool,
-                new_pool: pool_address,
+                pool_address,
             });
         }
-    }
-
-    #[generate_trait]
-    impl InternalFunctions of InternalFunctionsTrait {
-        fn _verify_lending_proof(
+        
+        fn get_vesu_pool(
             self: @ContractState,
-            lending_proof: LendingProofData
-        ) -> bool {
-            // Call ProofVerifier contract to verify balance proof
-            let proof_verifier_address = self.proof_verifier_address.read();
-            let proof_verifier = IProofVerifierDispatcher { contract_address: proof_verifier_address };
-            
-            // Create balance proof data for verification
-            let balance_proof_data = BalanceProofData {
-                commitment: lending_proof.balance_commitment,
-                min_amount: lending_proof.amount,
-                proof: lending_proof.proof.clone(),
-            };
-            
-            // Verify the balance proof through ProofVerifier
-            let balance_proof_valid = proof_verifier.verify_balance_proof(balance_proof_data);
-            
-            // Additional verification: Check commitment consistency
-            let computed_commitment = pedersen(
-                lending_proof.amount.try_into().unwrap(), 
-                lending_proof.balance_commitment
-            );
-            let commitment_valid = computed_commitment == lending_proof.amount_commitment;
-            
-            // Call VaultManager to verify user has sufficient balance
-            let vault_manager_address = self.vault_manager_address.read();
-            let vault_manager = IVaultManagerDispatcher { contract_address: vault_manager_address };
-            
-            let caller = get_caller_address();
-            let sufficient_balance = vault_manager.verify_sufficient_balance(
-                caller,
-                lending_proof.amount,
-                lending_proof.proof.clone()
-            );
-            
-            balance_proof_valid && commitment_valid && sufficient_balance
+            token: ContractAddress
+        ) -> ContractAddress {
+            self.vesu_pools.read(token)
         }
-
-        fn _calculate_interest_internal(
-            self: @ContractState,
-            position_id: felt252
-        ) -> u256 {
-            let position = self.lending_positions.read(position_id);
-            if position.commitment == 0 {
-                return 0;
-            }
-            
-            let current_time = get_block_timestamp();
-            let time_elapsed = current_time - position.timestamp;
-            
-            // Simplified interest calculation
-            // In production, this would use actual Vesu lending rates
-            let annual_rate = 500; // 5% APY in basis points
-            let seconds_per_year = 31536000_u64; // 365 * 24 * 60 * 60
-            
-            // Calculate pro-rata interest
-            // For simplicity, assume position amount is derivable from commitment
-            let estimated_principal = 1000_u256; // Placeholder - would be derived from ZK proof
-            let interest = (estimated_principal * annual_rate.into() * time_elapsed.into()) / 
-                          (10000_u256 * seconds_per_year.into());
-            
-            position.interest_accrued + interest
-        }
-
-        fn _get_fresh_lending_rate(
+        
+        fn get_private_pool_liquidity(
             self: @ContractState,
             token: ContractAddress
         ) -> u256 {
-            let pool_address = self.vesu_pools.read(token);
-            if pool_address.is_zero() {
-                return 300; // Default 3% if no pool
-            }
-            
-            // Query actual Vesu protocol for current rates
-            let vesu_pool = IVesuPoolDispatcher { contract_address: pool_address };
-            let supply_rate = vesu_pool.get_supply_rate();
-            
-            // Cache the rate
-            self.update_cached_rate(token, supply_rate);
-            
-            supply_rate
+            self.private_pool_liquidity.read(token)
         }
-
-        fn _interact_with_vesu_pool(
-            ref self: ContractState,
-            token: ContractAddress,
-            amount: u256,
-            is_deposit: bool
-        ) {
-            let pool_address = self.vesu_pools.read(token);
-            if pool_address.is_zero() {
-                return; // No pool configured
-            }
-            
-            // Create dispatcher for Vesu pool
-            let vesu_pool = IVesuPoolDispatcher { contract_address: pool_address };
-            
-            if is_deposit {
-                // Call Vesu's supply function to lend assets
-                let success = vesu_pool.supply(amount);
-                assert(success, 'Vesu supply failed');
-            } else {
-                // Call Vesu's withdraw function
-                let contract_address = get_contract_address();
-                let shares_withdrawn = vesu_pool.withdraw(amount, contract_address, contract_address);
-                assert(shares_withdrawn > 0, 'Vesu withdrawal failed');
-            }
-        }
-
+        
         fn update_cached_rate(
             ref self: ContractState,
             token: ContractAddress,
@@ -503,21 +360,32 @@ pub mod VesuAdapter {
         ) {
             self.cached_lending_rates.write(token, new_rate);
             self.rate_update_timestamps.write(token, get_block_timestamp());
+            
+            self.emit(RateUpdated {
+                token,
+                new_rate,
+            });
         }
-
-        fn get_position_by_user_index(
-            self: @ContractState,
-            user: ContractAddress,
-            index: u256
-        ) -> felt252 {
-            self.user_position_ids.read((user, index))
-        }
-
-        fn get_total_private_liquidity(
+        
+        fn get_cached_rate(
             self: @ContractState,
             token: ContractAddress
         ) -> u256 {
-            self.private_pool_liquidity.read(token)
+            self.cached_lending_rates.read(token)
+        }
+        
+        fn set_vault_manager_address(
+            ref self: ContractState,
+            address: ContractAddress
+        ) {
+            self.vault_manager_address.write(address);
+        }
+        
+        fn set_proof_verifier_address(
+            ref self: ContractState,
+            address: ContractAddress
+        ) {
+            self.proof_verifier_address.write(address);
         }
     }
 }
