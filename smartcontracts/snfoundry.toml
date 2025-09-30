@@ -1,11 +1,20 @@
-# Visit https://foundry-rs.github.io/starknet-foundry/appendix/snfoundry-toml.html
-# and https://foundry-rs.github.io/starknet-foundry/projects/configuration.html for more information
+# Arcanum Protocol - Deployment Configuration
 
-# [sncast.default]                                         # Define a profile name
-# url = "https://free-rpc.nethermind.io/sepolia-juno/v0_8" # Url of the RPC provider
-# accounts-file = "../account-file"                        # Path to the file with the account data
-# account = "mainuser"                                     # Account from `accounts_file` or default account file that will be used for the transactions
-# keystore = "~/keystore"                                  # Path to the keystore file
-# wait-params = { timeout = 300, retry-interval = 10 }     # Wait for submitted transaction parameters
-# block-explorer = "StarkScan"                             # Block explorer service used to display links to transaction details
-# show-explorer-links = true                               # Print links pointing to pages with transaction details in the chosen block explorer
+[sncast.default]
+# Network configuration - using a different RPC for compatibility
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+account = "deployer"
+wait-params = { timeout = 300, retry-interval = 10 }
+block-explorer = "StarkScan"
+show-explorer-links = true
+
+# Account configuration
+accounts-file = "/home/simze/.starknet_accounts/starknet_open_zeppelin_accounts.json"
+
+[sncast.sepolia]
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+account = "deployer"
+
+[sncast.mainnet]
+url = "https://starknet-mainnet.g.alchemy.com/v2/FIQ1qwifmra7ZqdkVHnZ2lHQAKG8j4Yd"
+account = "deployer"
