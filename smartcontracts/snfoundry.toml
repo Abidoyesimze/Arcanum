@@ -1,8 +1,8 @@
 # Arcanum Protocol - Deployment Configuration
 
 [sncast.default]
-# Network configuration - using a different RPC for compatibility
-url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+# Network configuration - using compatible RPC
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_9"
 account = "deployer"
 wait-params = { timeout = 300, retry-interval = 10 }
 block-explorer = "StarkScan"
@@ -12,7 +12,7 @@ show-explorer-links = true
 accounts-file = "/home/simze/.starknet_accounts/starknet_open_zeppelin_accounts.json"
 
 [sncast.sepolia]
-url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_9"
 account = "deployer"
 
 [sncast.mainnet]
