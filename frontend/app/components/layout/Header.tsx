@@ -7,10 +7,7 @@ import {
   Moon,
   Menu,
   Bell,
-  Wallet,
   User,
-  LogOut,
-  Settings,
   Eye,
   EyeOff,
   Lock,
@@ -19,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useLayout } from './LayoutProvider';
 import { useConnect, useDisconnect, useAccount } from '@starknet-react/core';
 import Link from 'next/link';
+import WalletDropdown from '../wallet/WalletDropdown';
 
 interface HeaderProps {
   className?: string;
@@ -29,14 +27,11 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
   const [activeLink, setActiveLink] = useState('Home');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showWalletMenu, setShowWalletMenu] = useState(false);
-  const [showConnectModal, setShowConnectModal] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(true);
   const [walletBalance, setWalletBalance] = useState('0.00');
 
   const router = useRouter();
   const { toggleSidebar } = useLayout();
-  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { address, isConnected, isConnecting, chainId, account } = useAccount();
 
@@ -133,19 +128,6 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
     setPrivacyMode(!privacyMode);
   };
 
-  const handleConnectClick = () => {
-    setShowConnectModal(true);
-  };
-
-  const handleDisconnect = () => {
-    disconnect();
-    setShowWalletMenu(false);
-  };
-
-  const handleConnectorClick = (connector: any) => {
-    connect({ connector });
-    setShowConnectModal(false);
-  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -154,19 +136,13 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
       if (isMobileMenuOpen && !target.closest('.mobile-menu-container')) {
         setIsMobileMenuOpen(false);
       }
-      if (showWalletMenu && !target.closest('.wallet-menu-container')) {
-        setShowWalletMenu(false);
-      }
-      if (showConnectModal && !target.closest('.connect-modal')) {
-        setShowConnectModal(false);
-      }
     };
 
     if (typeof window !== 'undefined') {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isMobileMenuOpen, showWalletMenu, showConnectModal]);
+  }, [isMobileMenuOpen]);
 
   return (
     <>
@@ -287,105 +263,11 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                       0
                     </span>
                   </button>
-
-                  {/* Wallet Menu */}
-                  <div className='wallet-menu-container relative'>
-                    <button
-                      onClick={() => setShowWalletMenu(!showWalletMenu)}
-                      className='flex items-center gap-2 hover:bg-white/10 rounded-lg p-2 transition-all duration-200'
-                    >
-                      <div className='w-8 h-8 bg-primary-gradient rounded-full flex items-center justify-center'>
-                        <User className='w-4 h-4 text-white' />
-                      </div>
-                      <div className='hidden sm:block text-left'>
-                        <p className='text-white text-sm font-medium'>Starknet User</p>
-                        <p className='text-purple-200 text-xs font-jetbrains'>
-                          {formatAddress(address)}
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    {showWalletMenu && (
-                      <div className='absolute right-0 top-full mt-2 w-64 bg-card-dark rounded-xl shadow-xl z-50 fade-in border border-gray-700'>
-                        <div className='p-4 border-b border-gray-700'>
-                          <p className='text-white font-medium'>Starknet User</p>
-                          <p className='text-gray-400 text-sm font-jetbrains break-all'>
-                            {address}
-                          </p>
-                          <div className='mt-2 flex items-center gap-2 flex-wrap'>
-                            <div className='wallet-connected px-2 py-1 rounded-md text-xs'>
-                              Connected
-                            </div>
-                            <span className='text-gray-400 text-xs'>{getNetworkName(chainId)}</span>
-                          </div>
-                        </div>
-
-                        <div className='p-2'>
-                          <button
-                            onClick={() => {
-                              setShowWalletMenu(false);
-                              router.push('/dashboard');
-                            }}
-                            className='w-full flex items-center gap-3 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors'
-                          >
-                            <Shield className='w-4 h-4' />
-                            My Vaults
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowWalletMenu(false);
-                              router.push('/settings');
-                            }}
-                            className='w-full flex items-center gap-3 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors'
-                          >
-                            <Settings className='w-4 h-4' />
-                            Settings
-                          </button>
-                          <button
-                            onClick={togglePrivacyMode}
-                            className='w-full flex items-center gap-3 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors'
-                          >
-                            {privacyMode ? (
-                              <EyeOff className='w-4 h-4' />
-                            ) : (
-                              <Eye className='w-4 h-4' />
-                            )}
-                            Privacy Mode: {privacyMode ? 'ON' : 'OFF'}
-                          </button>
-                          <div className='border-t border-gray-700 my-2'></div>
-                          <button
-                            onClick={handleDisconnect}
-                            className='w-full flex items-center gap-3 px-3 py-2 text-left text-red-400 hover:bg-red-500/10 rounded-lg transition-colors'
-                          >
-                            <LogOut className='w-4 h-4' />
-                            Disconnect
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
-              ) : (
-                /* Connect Wallet Button */
-                <button
-                  onClick={handleConnectClick}
-                  disabled={isConnecting}
-                  className={`btn-primary font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm focus-ring ${
-                    isConnecting ? 'opacity-70 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <Wallet className='w-4 h-4' />
-                  {isConnecting ? (
-                    <>
-                      <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'></div>
-                      Connecting...
-                    </>
-                  ) : (
-                    'Connect Wallet'
-                  )}
-                </button>
-              )}
+              ) : null}
+
+              {/* Wallet Dropdown Component */}
+              <WalletDropdown />
 
               {/* Mobile Menu Toggle */}
               {!showSidebarToggle && (
@@ -425,51 +307,6 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
         )}
       </header>
 
-      {/* Wallet Connect Modal */}
-      {showConnectModal && (
-        <div className='fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
-          <div className='connect-modal bg-card-dark rounded-2xl shadow-2xl border border-gray-700 max-w-md w-full p-6'>
-            <div className='flex items-center justify-between mb-6'>
-              <h2 className='text-2xl font-bold text-white'>Connect Wallet</h2>
-              <button
-                onClick={() => setShowConnectModal(false)}
-                className='text-gray-400 hover:text-white transition-colors'
-              >
-                <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className='space-y-3'>
-              {connectors.map((connector) => (
-                <button
-                  key={connector.id}
-                  onClick={() => handleConnectorClick(connector)}
-                  className='w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 border border-gray-700 hover:border-primary-purple'
-                >
-                  <div className='w-10 h-10 bg-primary-gradient rounded-lg flex items-center justify-center'>
-                    <Wallet className='w-5 h-5 text-white' />
-                  </div>
-                  <div className='text-left flex-1'>
-                    <p className='text-white font-medium capitalize'>{connector.name}</p>
-                    <p className='text-gray-400 text-sm'>Connect with {connector.name}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <p className='text-gray-400 text-sm text-center mt-6'>
-              By connecting, you agree to our Terms of Service
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Menu */}
       {!showSidebarToggle && (
@@ -510,7 +347,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                       </div>
                     </div>
                     <button
-                      onClick={handleDisconnect}
+                      onClick={() => disconnect()}
                       className='text-red-400 text-xs hover:text-red-300 transition-colors'
                     >
                       Disconnect
@@ -520,21 +357,9 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
 
                 {/* Mobile Connect Wallet */}
                 {!isConnected && (
-                  <button
-                    onClick={handleConnectClick}
-                    disabled={isConnecting}
-                    className='btn-primary w-full justify-center mb-4 flex items-center gap-2'
-                  >
-                    <Wallet className='w-4 h-4' />
-                    {isConnecting ? (
-                      <>
-                        <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'></div>
-                        Connecting...
-                      </>
-                    ) : (
-                      'Connect Wallet'
-                    )}
-                  </button>
+                  <div className='mb-4'>
+                    <WalletDropdown className='w-full' />
+                  </div>
                 )}
 
                 {navLinks.map((link, index) => (

@@ -54,3 +54,5 @@ logs/
 *private*
 *secret*
 *wallet*
+# But allow wallet components
+!frontend/app/components/wallet/
