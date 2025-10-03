@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLayout } from './LayoutProvider';
+import { useConnect, useDisconnect, useAccount } from '@starknet-react/core';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -24,35 +25,20 @@ interface HeaderProps {
   showSidebarToggle?: boolean;
 }
 
-interface WalletData {
-  address: string;
-  balance: string;
-  network: 'mainnet' | 'testnet';
-  notifications: number;
-  userName: string;
-  privacyMode: boolean;
-}
-
 const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = false }) => {
   const [activeLink, setActiveLink] = useState('Home');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(true);
+  const [walletBalance, setWalletBalance] = useState('0.00');
+
   const router = useRouter();
   const { toggleSidebar } = useLayout();
-
-  // Dummy wallet data
-  const walletData: WalletData = {
-    address: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
-    balance: '1,234.56',
-    network: 'mainnet',
-    notifications: 3,
-    userName: 'Anonymous User',
-    privacyMode: true,
-  };
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { address, isConnected, isConnecting, chainId, account } = useAccount();
 
   const navLinks = [
     { label: 'Home', path: '/' },
@@ -63,48 +49,69 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
     { label: 'Docs', path: '/docs' },
   ];
 
+  // Initialize theme on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark');
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    } else if (prefersDark) {
-      setIsDarkMode(true);
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.setAttribute('data-theme', 'light');
+      if (savedTheme) {
+        setIsDarkMode(savedTheme === 'dark');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else if (prefersDark) {
+        setIsDarkMode(true);
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        setIsDarkMode(false);
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
     }
   }, []);
+
+  // Fetch balance when account is connected
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (account && isConnected && address) {
+        try {
+          // TODO: Implement actual balance fetching using your token contract
+          // Example:
+          // const { Contract } = await import('starknet');
+          // const tokenContract = new Contract(tokenAbi, tokenAddress, account);
+          // const balance = await tokenContract.balanceOf(address);
+          // setWalletBalance(formatBalance(balance));
+
+          // For now, using placeholder
+          setWalletBalance('0.00');
+        } catch (error) {
+          console.error('Failed to fetch balance:', error);
+          setWalletBalance('0.00');
+        }
+      }
+    };
+
+    fetchBalance();
+  }, [account, isConnected, address]);
 
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     const theme = newTheme ? 'dark' : 'light';
-    localStorage.setItem('theme', theme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', theme);
+    }
     document.documentElement.setAttribute('data-theme', theme);
   };
 
-  const handleConnectWallet = async () => {
-    setIsConnecting(true);
+  const getNetworkName = (chainId: bigint | undefined): string => {
+    if (!chainId) return 'Unknown';
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setIsWalletConnected(true);
-      console.log('Wallet connected successfully');
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+    const networks: Record<string, string> = {
+      '0x534e5f4d41494e': 'Mainnet',
+      '0x534e5f5345504f4c4941': 'Sepolia',
+    };
 
-  const handleDisconnectWallet = () => {
-    setIsWalletConnected(false);
-    setShowWalletMenu(false);
-    console.log('Wallet disconnected');
+    const chainIdHex = '0x' + chainId.toString(16);
+    return networks[chainIdHex] || 'Unknown';
   };
 
   const handleLinkClick = (link: string, path: string) => {
@@ -113,7 +120,8 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
     router.push(path);
   };
 
-  const formatAddress = (address: string) => {
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -125,6 +133,21 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
     setPrivacyMode(!privacyMode);
   };
 
+  const handleConnectClick = () => {
+    setShowConnectModal(true);
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    setShowWalletMenu(false);
+  };
+
+  const handleConnectorClick = (connector: any) => {
+    connect({ connector });
+    setShowConnectModal(false);
+  };
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -134,11 +157,16 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
       if (showWalletMenu && !target.closest('.wallet-menu-container')) {
         setShowWalletMenu(false);
       }
+      if (showConnectModal && !target.closest('.connect-modal')) {
+        setShowConnectModal(false);
+      }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobileMenuOpen, showWalletMenu]);
+    if (typeof window !== 'undefined') {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isMobileMenuOpen, showWalletMenu, showConnectModal]);
 
   return (
     <>
@@ -176,9 +204,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
             </div>
 
             {/* Center - Navigation Links (Desktop) */}
-            <nav
-              className={`hidden lg:flex items-center space-x-1 ${showSidebarToggle ? 'lg:flex' : 'lg:flex'}`}
-            >
+            <nav className='hidden lg:flex items-center space-x-1'>
               {navLinks.map((link) => (
                 <button
                   key={link.path}
@@ -195,7 +221,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
             {/* Right Section */}
             <div className='flex items-center gap-2 flex-shrink-0'>
               {/* Privacy Mode Toggle */}
-              {isWalletConnected && (
+              {isConnected && (
                 <button
                   onClick={togglePrivacyMode}
                   className={`p-2 rounded-lg transition-all duration-200 ${
@@ -224,7 +250,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
               </button>
 
               {/* Wallet Section */}
-              {isWalletConnected ? (
+              {isConnected && address ? (
                 <div className='flex items-center gap-2'>
                   {/* Balance Display */}
                   <div className='hidden md:flex items-center gap-2 bg-primary-gradient px-3 py-1.5 rounded-lg'>
@@ -235,16 +261,16 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                       </span>
                     ) : (
                       <span className='text-white font-semibold text-sm font-jetbrains'>
-                        {walletData.balance} ETH
+                        {walletBalance} ETH
                       </span>
                     )}
                   </div>
 
                   {/* Network Indicator */}
                   <div className='hidden lg:flex items-center gap-1 bg-stark-gradient px-2 py-1 rounded-md'>
-                    <div className='w-2 h-2 bg-white rounded-full'></div>
-                    <span className='text-white text-xs font-medium capitalize'>
-                      {walletData.network}
+                    <div className='w-2 h-2 bg-white rounded-full animate-pulse'></div>
+                    <span className='text-white text-xs font-medium'>
+                      {getNetworkName(chainId)}
                     </span>
                   </div>
 
@@ -257,11 +283,9 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                   {/* Notifications */}
                   <button className='relative p-2 rounded-full hover:bg-white/20 transition-colors duration-200'>
                     <Bell className='w-5 h-5 text-white' />
-                    {walletData.notifications > 0 && (
-                      <span className='absolute -top-1 -right-1 bg-error-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
-                        {walletData.notifications}
-                      </span>
-                    )}
+                    <span className='absolute -top-1 -right-1 bg-error-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                      0
+                    </span>
                   </button>
 
                   {/* Wallet Menu */}
@@ -274,39 +298,45 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                         <User className='w-4 h-4 text-white' />
                       </div>
                       <div className='hidden sm:block text-left'>
-                        <p className='text-white text-sm font-medium'>{walletData.userName}</p>
+                        <p className='text-white text-sm font-medium'>Starknet User</p>
                         <p className='text-purple-200 text-xs font-jetbrains'>
-                          {formatAddress(walletData.address)}
+                          {formatAddress(address)}
                         </p>
                       </div>
                     </button>
 
                     {/* Dropdown Menu */}
                     {showWalletMenu && (
-                      <div className='absolute right-0 top-full mt-2 w-64 bg-card-dark rounded-xl shadow-xl z-50 fade-in'>
+                      <div className='absolute right-0 top-full mt-2 w-64 bg-card-dark rounded-xl shadow-xl z-50 fade-in border border-gray-700'>
                         <div className='p-4 border-b border-gray-700'>
-                          <p className='text-white font-medium'>{walletData.userName}</p>
-                          <p className='text-gray-400 text-sm font-jetbrains'>
-                            {formatAddress(walletData.address)}
+                          <p className='text-white font-medium'>Starknet User</p>
+                          <p className='text-gray-400 text-sm font-jetbrains break-all'>
+                            {address}
                           </p>
-                          <div className='mt-2 flex items-center gap-2'>
+                          <div className='mt-2 flex items-center gap-2 flex-wrap'>
                             <div className='wallet-connected px-2 py-1 rounded-md text-xs'>
                               Connected
                             </div>
-                            <span className='text-gray-400 text-xs'>{walletData.network}</span>
+                            <span className='text-gray-400 text-xs'>{getNetworkName(chainId)}</span>
                           </div>
                         </div>
 
                         <div className='p-2'>
                           <button
-                            onClick={() => router.push('/dashboard')}
+                            onClick={() => {
+                              setShowWalletMenu(false);
+                              router.push('/dashboard');
+                            }}
                             className='w-full flex items-center gap-3 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors'
                           >
                             <Shield className='w-4 h-4' />
                             My Vaults
                           </button>
                           <button
-                            onClick={() => router.push('/settings')}
+                            onClick={() => {
+                              setShowWalletMenu(false);
+                              router.push('/settings');
+                            }}
                             className='w-full flex items-center gap-3 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors'
                           >
                             <Settings className='w-4 h-4' />
@@ -325,7 +355,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                           </button>
                           <div className='border-t border-gray-700 my-2'></div>
                           <button
-                            onClick={handleDisconnectWallet}
+                            onClick={handleDisconnect}
                             className='w-full flex items-center gap-3 px-3 py-2 text-left text-red-400 hover:bg-red-500/10 rounded-lg transition-colors'
                           >
                             <LogOut className='w-4 h-4' />
@@ -339,7 +369,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
               ) : (
                 /* Connect Wallet Button */
                 <button
-                  onClick={handleConnectWallet}
+                  onClick={handleConnectClick}
                   disabled={isConnecting}
                   className={`btn-primary font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm focus-ring ${
                     isConnecting ? 'opacity-70 cursor-not-allowed' : ''
@@ -395,6 +425,52 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
         )}
       </header>
 
+      {/* Wallet Connect Modal */}
+      {showConnectModal && (
+        <div className='fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
+          <div className='connect-modal bg-card-dark rounded-2xl shadow-2xl border border-gray-700 max-w-md w-full p-6'>
+            <div className='flex items-center justify-between mb-6'>
+              <h2 className='text-2xl font-bold text-white'>Connect Wallet</h2>
+              <button
+                onClick={() => setShowConnectModal(false)}
+                className='text-gray-400 hover:text-white transition-colors'
+              >
+                <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M6 18L18 6M6 6l12 12'
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className='space-y-3'>
+              {connectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => handleConnectorClick(connector)}
+                  className='w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 border border-gray-700 hover:border-primary-purple'
+                >
+                  <div className='w-10 h-10 bg-primary-gradient rounded-lg flex items-center justify-center'>
+                    <Wallet className='w-5 h-5 text-white' />
+                  </div>
+                  <div className='text-left flex-1'>
+                    <p className='text-white font-medium capitalize'>{connector.name}</p>
+                    <p className='text-gray-400 text-sm'>Connect with {connector.name}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <p className='text-gray-400 text-sm text-center mt-6'>
+              By connecting, you agree to our Terms of Service
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Menu */}
       {!showSidebarToggle && (
         <div
@@ -412,29 +488,29 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
             <nav className='max-w-[90vw] mx-auto px-4 py-4'>
               <div className='flex flex-col space-y-2'>
                 {/* Mobile Wallet Info */}
-                {isWalletConnected && (
+                {isConnected && address && (
                   <div className='flex items-center justify-between p-4 bg-white/10 rounded-lg mb-4'>
                     <div className='flex items-center gap-3'>
                       <div className='w-10 h-10 bg-primary-gradient rounded-full flex items-center justify-center'>
                         <User className='w-5 h-5 text-white' />
                       </div>
                       <div>
-                        <p className='text-white text-sm font-medium'>{walletData.userName}</p>
+                        <p className='text-white text-sm font-medium'>Starknet User</p>
                         <p className='text-purple-200 text-xs font-jetbrains'>
-                          {formatAddress(walletData.address)}
+                          {formatAddress(address)}
                         </p>
                         <div className='flex items-center gap-3 text-xs mt-1'>
                           {privacyMode ? (
                             <span className='text-primary-purple'>●●●●●● ETH</span>
                           ) : (
-                            <span className='text-primary-purple'>{walletData.balance} ETH</span>
+                            <span className='text-primary-purple'>{walletBalance} ETH</span>
                           )}
-                          <span className='text-encrypted capitalize'>{walletData.network}</span>
+                          <span className='text-encrypted'>{getNetworkName(chainId)}</span>
                         </div>
                       </div>
                     </div>
                     <button
-                      onClick={handleDisconnectWallet}
+                      onClick={handleDisconnect}
                       className='text-red-400 text-xs hover:text-red-300 transition-colors'
                     >
                       Disconnect
@@ -443,14 +519,21 @@ const Header: React.FC<HeaderProps> = ({ className = '', showSidebarToggle = fal
                 )}
 
                 {/* Mobile Connect Wallet */}
-                {!isWalletConnected && (
+                {!isConnected && (
                   <button
-                    onClick={handleConnectWallet}
+                    onClick={handleConnectClick}
                     disabled={isConnecting}
-                    className='btn-primary w-full justify-center mb-4'
+                    className='btn-primary w-full justify-center mb-4 flex items-center gap-2'
                   >
                     <Wallet className='w-4 h-4' />
-                    {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                    {isConnecting ? (
+                      <>
+                        <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'></div>
+                        Connecting...
+                      </>
+                    ) : (
+                      'Connect Wallet'
+                    )}
                   </button>
                 )}
 
