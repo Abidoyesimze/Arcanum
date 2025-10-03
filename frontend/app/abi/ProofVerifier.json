@@ -1,0 +1,104 @@
+[
+    {
+      "name": "ProofVerifierImpl",
+      "type": "impl",
+      "interface_name": "smartcontracts::ProofVerifier::IProofVerifier"
+    },
+    {
+      "name": "core::integer::u256",
+      "type": "struct",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::ProofVerifier::ProofData",
+      "type": "struct",
+      "members": [
+        {
+          "name": "commitment",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "proof",
+          "type": "core::array::Array::<core::felt252>"
+        }
+      ]
+    },
+    {
+      "name": "core::bool",
+      "type": "enum",
+      "variants": [
+        {
+          "name": "False",
+          "type": "()"
+        },
+        {
+          "name": "True",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::ProofVerifier::IProofVerifier",
+      "type": "interface",
+      "items": [
+        {
+          "name": "verify_balance_proof",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "proof_data",
+              "type": "smartcontracts::ProofVerifier::ProofData"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "name": "constructor",
+      "type": "constructor",
+      "inputs": []
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::ProofVerifier::ProofVerifier::ProofVerified",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "is_valid",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "smartcontracts::ProofVerifier::ProofVerifier::Event",
+      "type": "event",
+      "variants": [
+        {
+          "kind": "nested",
+          "name": "ProofVerified",
+          "type": "smartcontracts::ProofVerifier::ProofVerifier::ProofVerified"
+        }
+      ]
+    }
+  ]

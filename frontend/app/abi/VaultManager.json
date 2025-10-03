@@ -1,0 +1,137 @@
+[
+    {
+      "name": "VaultManagerImpl",
+      "type": "impl",
+      "interface_name": "smartcontracts::VaultManager::IVaultManager"
+    },
+    {
+      "name": "core::integer::u256",
+      "type": "struct",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::VaultManager::VaultPosition",
+      "type": "struct",
+      "members": [
+        {
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "commitment",
+          "type": "core::felt252"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::VaultManager::IVaultManager",
+      "type": "interface",
+      "items": [
+        {
+          "name": "deposit_to_vault",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "amount",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "commitment",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "name": "get_vault_position",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "position_id",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "smartcontracts::VaultManager::VaultPosition"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "name": "constructor",
+      "type": "constructor",
+      "inputs": []
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::VaultManager::VaultManager::VaultDeposit",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "position_id",
+          "type": "core::felt252"
+        },
+        {
+          "kind": "data",
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "amount",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "smartcontracts::VaultManager::VaultManager::Event",
+      "type": "event",
+      "variants": [
+        {
+          "kind": "nested",
+          "name": "VaultDeposit",
+          "type": "smartcontracts::VaultManager::VaultManager::VaultDeposit"
+        }
+      ]
+    }
+  ]

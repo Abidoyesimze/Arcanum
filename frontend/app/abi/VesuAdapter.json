@@ -1,0 +1,441 @@
+[
+    {
+      "name": "VesuAdapterImpl",
+      "type": "impl",
+      "interface_name": "smartcontracts::VesuAdapter::IVesuAdapter"
+    },
+    {
+      "name": "core::integer::u256",
+      "type": "struct",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::VesuAdapter::LendingProofData",
+      "type": "struct",
+      "members": [
+        {
+          "name": "balance_commitment",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount_commitment",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "proof",
+          "type": "core::array::Array::<core::felt252>"
+        }
+      ]
+    },
+    {
+      "name": "core::bool",
+      "type": "enum",
+      "variants": [
+        {
+          "name": "False",
+          "type": "()"
+        },
+        {
+          "name": "True",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::VesuAdapter::PrivateLendingPosition",
+      "type": "struct",
+      "members": [
+        {
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "commitment",
+          "type": "core::felt252"
+        },
+        {
+          "name": "interest_accrued",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "lending_pool",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::VesuAdapter::IVesuAdapter",
+      "type": "interface",
+      "items": [
+        {
+          "name": "private_lend",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "lending_proof",
+              "type": "smartcontracts::VesuAdapter::LendingProofData"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "name": "private_withdraw_lending",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "position_id",
+              "type": "core::felt252"
+            },
+            {
+              "name": "withdrawal_proof",
+              "type": "core::array::Array::<core::felt252>"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "name": "calculate_private_interest",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "position_id",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "get_lending_rate",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "get_private_position",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "position_id",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "smartcontracts::VesuAdapter::PrivateLendingPosition"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "get_user_position_count",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "get_user_position_id",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "index",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "set_vesu_pool",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "pool_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "name": "get_vesu_pool",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "get_private_pool_liquidity",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "update_cached_rate",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "new_rate",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "name": "get_cached_rate",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "name": "set_vault_manager_address",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "name": "set_proof_verifier_address",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "name": "constructor",
+      "type": "constructor",
+      "inputs": [
+        {
+          "name": "vault_manager_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "proof_verifier_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::VesuAdapter::VesuAdapter::PrivateLendingCreated",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "position_id",
+          "type": "core::felt252"
+        },
+        {
+          "kind": "data",
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "amount",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::VesuAdapter::VesuAdapter::PrivateLendingWithdrawn",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "position_id",
+          "type": "core::felt252"
+        },
+        {
+          "kind": "data",
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "amount",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::VesuAdapter::VesuAdapter::VesuPoolUpdated",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "pool_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::VesuAdapter::VesuAdapter::RateUpdated",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "kind": "data",
+          "name": "new_rate",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "smartcontracts::VesuAdapter::VesuAdapter::Event",
+      "type": "event",
+      "variants": [
+        {
+          "kind": "nested",
+          "name": "PrivateLendingCreated",
+          "type": "smartcontracts::VesuAdapter::VesuAdapter::PrivateLendingCreated"
+        },
+        {
+          "kind": "nested",
+          "name": "PrivateLendingWithdrawn",
+          "type": "smartcontracts::VesuAdapter::VesuAdapter::PrivateLendingWithdrawn"
+        },
+        {
+          "kind": "nested",
+          "name": "VesuPoolUpdated",
+          "type": "smartcontracts::VesuAdapter::VesuAdapter::VesuPoolUpdated"
+        },
+        {
+          "kind": "nested",
+          "name": "RateUpdated",
+          "type": "smartcontracts::VesuAdapter::VesuAdapter::RateUpdated"
+        }
+      ]
+    }
+  ]

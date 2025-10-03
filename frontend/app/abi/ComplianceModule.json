@@ -1,0 +1,141 @@
+[
+    {
+      "name": "ComplianceModuleImpl",
+      "type": "impl",
+      "interface_name": "smartcontracts::ComplianceModule::IComplianceModule"
+    },
+    {
+      "name": "core::integer::u256",
+      "type": "struct",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "name": "core::bool",
+      "type": "enum",
+      "variants": [
+        {
+          "name": "False",
+          "type": "()"
+        },
+        {
+          "name": "True",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::ComplianceModule::ComplianceRule",
+      "type": "struct",
+      "members": [
+        {
+          "name": "rule_id",
+          "type": "core::felt252"
+        },
+        {
+          "name": "rule_type",
+          "type": "core::felt252"
+        },
+        {
+          "name": "min_threshold",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "max_threshold",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "name": "smartcontracts::ComplianceModule::IComplianceModule",
+      "type": "interface",
+      "items": [
+        {
+          "name": "add_compliance_rule",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "rule_id",
+              "type": "core::felt252"
+            },
+            {
+              "name": "rule_type",
+              "type": "core::felt252"
+            },
+            {
+              "name": "min_threshold",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "max_threshold",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "name": "get_compliance_rule",
+          "type": "function",
+          "inputs": [
+            {
+              "name": "rule_id",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "smartcontracts::ComplianceModule::ComplianceRule"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "name": "constructor",
+      "type": "constructor",
+      "inputs": []
+    },
+    {
+      "kind": "struct",
+      "name": "smartcontracts::ComplianceModule::ComplianceModule::ComplianceRuleAdded",
+      "type": "event",
+      "members": [
+        {
+          "kind": "data",
+          "name": "rule_id",
+          "type": "core::felt252"
+        },
+        {
+          "kind": "data",
+          "name": "rule_type",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "smartcontracts::ComplianceModule::ComplianceModule::Event",
+      "type": "event",
+      "variants": [
+        {
+          "kind": "nested",
+          "name": "ComplianceRuleAdded",
+          "type": "smartcontracts::ComplianceModule::ComplianceModule::ComplianceRuleAdded"
+        }
+      ]
+    }
+  ]
