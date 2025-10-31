@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "starknet": "^7.6.4",
+    "viem": "^2.38.0"
+  }
+}
