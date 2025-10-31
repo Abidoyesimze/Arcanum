@@ -26,25 +26,43 @@ export default function WalletDropdown({ className = '' }: WalletDropdownProps) 
   useEffect(() => {
     const loadWallets = async () => {
       try {
-        // Use the connectors from Starknet React to determine available wallets
-        const walletOptions = [
-          {
-            id: 'argentX',
-            name: 'Argent X',
-            description: 'Secure smart wallet',
-            icon: '🛡️',
-            isInstalled: connectors.some(c => c.id.toLowerCase().includes('argent'))
-          },
-          {
-            id: 'braavos',
-            name: 'Braavos',
-            description: 'Multi-sig wallet',
-            icon: '⚔️',
-            isInstalled: connectors.some(c => c.id.toLowerCase().includes('braavos'))
+        // Map connectors to wallet options with WalletConnect support
+        const walletOptions: WalletInfo[] = connectors.map(connector => {
+          const connectorId = connector.id.toLowerCase();
+          
+          if (connectorId.includes('argent')) {
+            return {
+              id: connector.id,
+              name: connector.name || 'Argent X',
+              description: 'Browser extension & Mobile via WalletConnect',
+              icon: '🛡️',
+              isInstalled: true // WalletConnect makes it always available
+            };
+          } else if (connectorId.includes('braavos')) {
+            return {
+              id: connector.id,
+              name: connector.name || 'Braavos',
+              description: 'Browser extension & Mobile via WalletConnect',
+              icon: '⚔️',
+              isInstalled: true // WalletConnect makes it always available
+            };
+          } else {
+            return {
+              id: connector.id,
+              name: connector.name || 'Wallet',
+              description: 'Starknet wallet',
+              icon: '💼',
+              isInstalled: true
+            };
           }
-        ];
+        });
         
-        setAvailableWallets(walletOptions);
+        // Remove duplicates based on name (keep first occurrence which is the WalletConnect one)
+        const uniqueWallets = walletOptions.filter((wallet, index, self) => 
+          index === self.findIndex((w) => w.name === wallet.name)
+        );
+        
+        setAvailableWallets(uniqueWallets);
       } catch (error) {
         console.error('Error loading wallets:', error);
         // Fallback to default wallets
@@ -52,14 +70,14 @@ export default function WalletDropdown({ className = '' }: WalletDropdownProps) 
           {
             id: 'argentX',
             name: 'Argent X',
-            description: 'Secure smart wallet',
+            description: 'Browser & Mobile via WalletConnect',
             icon: '🛡️',
             isInstalled: true
           },
           {
             id: 'braavos',
             name: 'Braavos',
-            description: 'Multi-sig wallet',
+            description: 'Browser & Mobile via WalletConnect',
             icon: '⚔️',
             isInstalled: true
           }
@@ -281,6 +299,9 @@ export default function WalletDropdown({ className = '' }: WalletDropdownProps) 
 
             <div className="p-2 border-t border-gray-700">
               <p className="text-gray-400 text-xs text-center">
+                Powered by WalletConnect
+              </p>
+              <p className="text-gray-500 text-xs text-center mt-1">
                 By connecting, you agree to our Terms of Service
               </p>
             </div>

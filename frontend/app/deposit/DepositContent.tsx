@@ -6,9 +6,7 @@ import AppLayout from "../components/layout/AppLayout"
 import { useAccount, useReadContract, useContract, useSendTransaction } from "@starknet-react/core"
 import { TOKEN_ADDRESSES } from "@/lib/addresses"
 import { formatTokenAmount, parseTokenAmount, generateCommitment, toU256 } from "@/lib/utils"
-import ERC20_ABI from "@/lib/ERC20.json"
-import { VaultManagerContract } from "@/app/abi/index"
-import type { Abi } from "starknet"
+import { VaultManagerContract, ERC20_ABI } from "@/app/abi/index"
 
 interface Token {
   id: string
@@ -45,7 +43,7 @@ export default function DepositContent() {
   const [isApproving, setIsApproving] = useState(false)
 
   const { data: ethBalance } = useReadContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     functionName: "balanceOf",
     address: TOKEN_ADDRESSES.ETH,
     args: address ? [address] : undefined,
@@ -53,7 +51,7 @@ export default function DepositContent() {
   })
 
   const { data: usdcBalance } = useReadContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     functionName: "balanceOf",
     address: TOKEN_ADDRESSES.USDC,
     args: address ? [address] : undefined,
@@ -61,7 +59,7 @@ export default function DepositContent() {
   })
 
   const { data: usdtBalance } = useReadContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     functionName: "balanceOf",
     address: TOKEN_ADDRESSES.USDT,
     args: address ? [address] : undefined,
@@ -69,7 +67,7 @@ export default function DepositContent() {
   })
 
   const { data: daiBalance } = useReadContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     functionName: "balanceOf",
     address: TOKEN_ADDRESSES.DAI,
     args: address ? [address] : undefined,
@@ -77,7 +75,7 @@ export default function DepositContent() {
   })
 
   const { data: allowance } = useReadContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     functionName: "allowance",
     address: selectedToken?.contractAddress as `0x${string}`,
     args: address && selectedToken ? [address, VaultManagerContract.address] : undefined,
@@ -85,7 +83,7 @@ export default function DepositContent() {
   })
 
   const { contract: tokenContract } = useContract({
-    abi: ERC20_ABI as Abi,
+    abi: ERC20_ABI,
     address: selectedToken?.contractAddress as `0x${string}`,
   })
 

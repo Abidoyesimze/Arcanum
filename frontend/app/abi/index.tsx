@@ -2,6 +2,7 @@ import ComplianceModuleImport from './ComplianceModule.json';
 import ProofVerifierImport from './ProofVerifier.json';
 import VaultManagerImport from './VaultManager.json';
 import VesuAdapterImport from './VesuAdapter.json';
+import ERC20Import from '@/lib/ERC20.json';
 import type { Abi } from 'starknet';
 
 // Helper function to ensure we get a proper array from JSON imports
@@ -17,6 +18,7 @@ const ComplianceModule = ensureAbiArray(ComplianceModuleImport);
 const ProofVerifier = ensureAbiArray(ProofVerifierImport);
 const VaultManager = ensureAbiArray(VaultManagerImport);
 const VesuAdapter = ensureAbiArray(VesuAdapterImport);
+export const ERC20_ABI = ensureAbiArray(ERC20Import) as Abi;
 
 export const ComplianceModuleContract = {
     abi: ComplianceModule as Abi,
